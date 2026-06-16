@@ -1,17 +1,24 @@
 from pathlib import Path
 
-VALIDATION_PATTERNS = [
-    "@Valid",
-    "validator",
-    "sanitize",
-    "Joi",
-    "zod",
-    "Pattern",
-    "matches(",
-    "isValid"
+AUTHZ_PATTERNS = [
+    "@PreAuthorize",
+    "@RolesAllowed",
+    "hasRole(",
+    "hasAuthority(",
+    "isAuthenticated(",
+    "ROLE_ADMIN",
+    "ROLE_USER",
+    "GrantedAuthority",
+    "permission",
+    "permissions",
+    "access",
+    "authorize",
+    "authorization",
+    "role",
+    "roles"
 ]
 
-def detect_validations(repo_path):
+def detect_authorization(repo_path):
 
     findings = []
 
@@ -37,15 +44,15 @@ def detect_validations(repo_path):
                 start=1
             ):
 
-                for validation in VALIDATION_PATTERNS:
+                for pattern in AUTHZ_PATTERNS:
 
-                    if validation in line:
+                    if pattern in line:
 
                         findings.append(
                             {
                                 "file": str(file),
                                 "line": line_num,
-                                "validation": validation,
+                                "type": pattern,
                                 "code": line.strip()
                             }
                         )

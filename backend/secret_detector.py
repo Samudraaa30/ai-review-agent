@@ -1,27 +1,25 @@
 from pathlib import Path
+import re
 
-VALIDATION_PATTERNS = [
-    "@Valid",
-    "validator",
-    "sanitize",
-    "Joi",
-    "zod",
-    "Pattern",
-    "matches(",
-    "isValid"
-]
+PATTERNS = {
+    "AWS Key": r"AKIA[0-9A-Z]{16}",
+    "Password": r"password\s*=",
+    "API Key": r"apikey\s*=",
+    "Token": r"token\s*="
+}
 
-def detect_validations(repo_path):
+def detect_secrets(repo_path):
 
     findings = []
 
     for file in Path(repo_path).rglob("*"):
 
         if file.suffix not in [
-            ".java",
+            ".py",
             ".js",
             ".ts",
-            ".py"
+            ".java",
+            ".env"
         ]:
             continue
 
@@ -37,15 +35,19 @@ def detect_validations(repo_path):
                 start=1
             ):
 
-                for validation in VALIDATION_PATTERNS:
+                for secret_type, pattern in PATTERNS.items():
 
-                    if validation in line:
+                    if re.search(
+                        pattern,
+                        line,
+                        re.IGNORECASE
+                    ):
 
                         findings.append(
                             {
                                 "file": str(file),
                                 "line": line_num,
-                                "validation": validation,
+                                "type": secret_type,
                                 "code": line.strip()
                             }
                         )

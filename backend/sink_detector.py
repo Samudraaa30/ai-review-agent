@@ -1,17 +1,17 @@
 from pathlib import Path
 
-VALIDATION_PATTERNS = [
-    "@Valid",
-    "validator",
-    "sanitize",
-    "Joi",
-    "zod",
-    "Pattern",
-    "matches(",
-    "isValid"
+SINKS = [
+    "executeQuery(",
+    "executeUpdate(",
+    "Statement.execute(",
+    "Runtime.getRuntime().exec(",
+    "ProcessBuilder(",
+    "eval(",
+    "innerHTML",
+    "document.write("
 ]
 
-def detect_validations(repo_path):
+def detect_sinks(repo_path):
 
     findings = []
 
@@ -37,15 +37,15 @@ def detect_validations(repo_path):
                 start=1
             ):
 
-                for validation in VALIDATION_PATTERNS:
+                for sink in SINKS:
 
-                    if validation in line:
+                    if sink in line:
 
                         findings.append(
                             {
                                 "file": str(file),
                                 "line": line_num,
-                                "validation": validation,
+                                "sink": sink,
                                 "code": line.strip()
                             }
                         )
