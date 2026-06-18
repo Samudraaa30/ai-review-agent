@@ -154,5 +154,131 @@
         "review_type": "Input Validation",
         "risk_score": 70,
         "timestamp": "2026-06-18 10:49:18.115753"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 11:34:50.186799"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 11:36:15.922205"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 11:36:29.814757"
+    },
+    {
+        "repo": "https://github.com/digininja/DVWA",
+        "review_type": "Input Validation",
+        "risk_score": 0,
+        "timestamp": "2026-06-18 12:08:22.695864"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 12:37:11.207322"
+    },
+    {
+        "repo": "https://github.com/OWASP/WebGoat",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 12:45:57.774974"
+    },
+    {
+        "repo": "https://github.com/digininja/DVWA",
+        "review_type": "Input Validation",
+        "risk_score": 0,
+        "timestamp": "2026-06-18 13:18:06.373314"
+    },
+    {
+        "repo": "https://github.com/juice-shop/juice-shop",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 13:19:12.481262"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 13:40:37.180461"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 13:41:17.878335"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 14:12:26.986168"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 14:39:16.064453"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 14:47:18.115204"
+    },
+    {
+        "repo": "https://github.com/OWASP/WebGoat",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 15:05:47.443844"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 15:31:11.568181"
+    },
+    {
+        "repo": "https://github.com/fastapi/fastapi",
+        "review_type": "Input Validation",
+        "risk_score": 0,
+        "timestamp": "2026-06-18 15:38:33.956521"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 15:40:29.554196"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 15:45:14.102269"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 15:46:59.207615"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "timestamp": "2026-06-18 15:50:34.033268"
+    },
+    {
+        "repo": "https://github.com/pallets/flask",
+        "review_type": "Input Validation",
+        "risk_score": 100,
+        "timestamp": "2026-06-18 15:53:43.384739"
     }
 ]

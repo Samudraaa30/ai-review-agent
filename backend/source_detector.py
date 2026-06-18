@@ -19,7 +19,10 @@ def detect_sources(repo_path):
             ".java",
             ".js",
             ".ts",
-            ".py"
+            ".py",
+            ".php",
+            ".html",
+            ".css"
         ]:
             continue
 

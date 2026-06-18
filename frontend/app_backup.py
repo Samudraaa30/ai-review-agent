@@ -108,152 +108,18 @@ from backend.chunk_reviewer import (
     review_chunk
 )
 
-from backend.review_store import (
-    load_reviews,
-    save_reviews
-)
-from datetime import datetime
-
-from backend.auth_store import (
-    load_users,
-    save_users
-)
-
 st.set_page_config(
     page_title="AI SSDLC Review Agent",
     layout="wide"
 )
-if "logged_in" not in st.session_state:
 
-    st.session_state.logged_in = False
+st.title("🔒 AI SSDLC Review Agent")
 
-if "username" not in st.session_state:
-
-    st.session_state.username = None
-
-if "role" not in st.session_state:
-
-    st.session_state.role = None
-if not st.session_state.logged_in:
-
-    tab1, tab2 = st.tabs(
-        [
-            "Login",
-            "Register"
-        ]
-    )
-
-    with tab1:
-
-        username = st.text_input(
-            "Username",
-            key="login_user"
-        )
-
-        password = st.text_input(
-            "Password",
-            type="password",
-            key="login_pass"
-        )
-
-        if st.button(
-            "Login"
-        ):
-
-            users = load_users()
-
-            for user in users:
-
-                if (
-                    user["username"] == username
-                    and
-                    user["password"] == password
-                ):
-
-                    st.session_state.logged_in = True
-
-                    st.session_state.username = username
-
-                    st.session_state.role = user["role"]
-
-                    st.rerun()
-
-            st.error(
-                "Invalid credentials"
-            )
-
-    with tab2:
-
-        new_user = st.text_input(
-            "Username",
-            key="register_user"
-        )
-
-        new_pass = st.text_input(
-            "Password",
-            type="password",
-            key="register_pass"
-        )
-
-        role = st.selectbox(
-            "Role",
-            [
-                "Developer",
-                "Manager"
-            ]
-        )
-
-        if st.button(
-            "Register"
-        ):
-
-            users = load_users()
-
-            users.append(
-                {
-                    "username": new_user,
-                    "password": new_pass,
-                    "role": role
-                }
-            )
-
-            save_users(
-                users
-            )
-
-            st.success(
-                "Registration successful"
-            )
-
-    st.stop()
-st.title(
-    "🔒 AI SSDLC Review Agent"
-)
-st.sidebar.success(
-    f"Logged in as {st.session_state.username}"
-)
-
-st.sidebar.write(
-    f"Role: {st.session_state.role}"
-)
-
-if st.sidebar.button(
-    "🚪 Logout"
-):
-
-    st.session_state.logged_in = False
-
-    st.session_state.username = None
-
-    st.session_state.role = None
-
-    st.rerun()
-if st.session_state.role == "Developer":
- repo_url = st.text_input(
+repo_url = st.text_input(
     "GitHub Repository URL"
- )
+)
 
- review_type = st.selectbox(
+review_type = st.selectbox(
     "Review Type",
     [
         "Input Validation",
@@ -263,9 +129,9 @@ if st.session_state.role == "Developer":
         "Dependency Security",
         "Logging & Monitoring"
     ]
- )
+)
 
- if st.button("Scan Repository"):
+if st.button("Scan Repository"):
 
     if not repo_url:
 
@@ -427,25 +293,6 @@ if st.session_state.role == "Developer":
                 summary,
                 findings,
                 risk_score
-            )
-            reviews = load_reviews()
-            reviews.append(
-             {
-              "repo": repo_url,
-              "review_type": review_type,
-              "risk_score": risk_score,
-              "pdf_path": pdf_path,
-              "timestamp": datetime.now().strftime(
-              "%d-%m-%Y %H:%M"
-               ),
-              "submitted_by": "Developer",
-              "status": "Pending",
-              "manager_comment": ""
-             }
-            )
-
-            save_reviews(
-             reviews
             )
             st.success(
                 "Input Validation Review Complete"
@@ -770,44 +617,9 @@ if st.session_state.role == "Developer":
                         review
                     )
             st.header(
-             "📋 Manager Feedback"
-            )
-
-            reviews = load_reviews()
-
-            for review in reviews:
-
-              if review.get("repo") == repo_url:
-
-               status = review.get("status", "Pending")
-               st.success(
-               f"Status: {status}"
-               )
-               if status == "Approved":
-
-                st.success(
-                  "✅ APPROVED"
-                )
-
-               elif status == "Rejected":
-
-                st.error(
-                 "❌ REJECTED"
-                )
-
-               else:
-
-                st.warning(
-                 "⏳ PENDING"
-                )
-               st.write(
-                 f"Manager Comment: {review.get('manager_comment','')}"
-               ) 
-            
-            st.header(
                 "📈 Scan History"
             )
-            
+
             history = load_history()
 
             if history:
@@ -1240,190 +1052,3 @@ if st.session_state.role == "Developer":
                 st.info(
                     "No logging controls detected."
                 )
-elif st.session_state.role == "Manager":
- manager_page = st.sidebar.radio(
-    "Manager Menu",
-    [
-        "Review Queue",
-        "Dashboard"
-    ]
- )
- if manager_page == "Review Queue":
-  reviews = load_reviews() or []
-
-  st.set_page_config(
-    page_title="Manager Portal",
-    layout="wide"
-  )
-
-  st.title(
-    "📊 Manager Portal"
-  )
-  filter_status = st.selectbox(
-    "Filter",
-    [
-        "All",
-        "Pending",
-        "Approved",
-        "Rejected"
-    ]
-  )
-  pending = len(
-    [
-        r
-        for r in reviews
-        if r.get(
-            "status",
-            "Pending"
-        ) == "Pending"
-    ]
-  )
-
-  approved = len(
-    [
-        r
-        for r in reviews
-        if r.get(
-            "status",
-            "Pending"
-        ) == "Approved"
-    ]
-  )
-
-  rejected = len(
-    [
-        r
-        for r in reviews
-        if r.get(
-            "status",
-            "Pending"
-        ) == "Rejected"
-    ]
-  )
-  c1, c2, c3 = st.columns(3)
-
-  c1.metric(
-    "Pending Reviews",
-    pending
-  )
-
-  c2.metric(
-    "Approved Reviews",
-    approved
-  )
-
-  c3.metric(
-    "Rejected Reviews",
-    rejected
-  )
-  report_file = "report.pdf"
-  for i, review in enumerate(reviews):
-    if (
-        filter_status != "All"
-        and review.get(
-            "status",
-            "Pending"
-        ) != filter_status
-    ):
-        continue
-
-    st.subheader(
-        review.get(
-            "repo",
-            "Unknown Repo"
-        )
-    )
-
-    st.write(
-        f"Review Type: {review.get('review_type','N/A')}"
-    )
-
-    st.write(
-        f"Risk Score: {review.get('risk_score','N/A')}"
-    )
-    pdf_path = review.get(
-    "pdf_path"
-    )
-
-    if pdf_path:
-
-     try:
-
-        with open(
-            pdf_path,
-            "rb"
-        ) as pdf_file:
-
-            st.download_button(
-                "📄 Download Report",
-                pdf_file,
-                file_name="Review_Report.pdf",
-                mime="application/pdf",
-                key=f"pdf_{i}"
-            )
-
-     except:
-
-        st.warning(
-            "Report not found"
-        )
-    st.write(
-       f"Submitted: {review.get('timestamp','N/A')}"
-    )
-
-    st.write(
-      f"Submitted By: {review.get('submitted_by','N/A')}"
-    )
-    try:
-        with open(
-            report_file,
-            "rb"
-        ) as pdf_file:
-            st.download_button(
-                "📄 Download Latest Report",
-                pdf_file,
-                file_name="Review_Report.pdf",
-                mime="application/pdf"
-            )
-    except:
-        st.warning(
-            "No report available."
-        )
-
-    st.write(
-        f"Current Status: {review.get('status','Pending')}"
-    )
-
-    status = st.selectbox(
-        "Status",
-        [
-            "Pending",
-            "Approved",
-            "Rejected"
-        ],
-        key=f"status_{i}"
-    )
-
-    comment = st.text_area(
-        "Manager Comment",
-        value=review.get(
-            "manager_comment",
-            ""
-        ),
-        key=f"comment_{i}"
-    )
-
-    review["status"] = status
-    review["manager_comment"] = comment
-
-    st.divider()
-
- if st.button(
-    "💾 Save Reviews"
- ):
-    save_reviews(
-        reviews
-    )
-    st.success(
-        "Reviews Saved"
-    )

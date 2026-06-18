@@ -1,0 +1,103 @@
+[
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "status": "Approved",
+        "manager_comment": "yes"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "status": "Approved",
+        "manager_comment": "yes"
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/OWASP/WebGoat",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:05",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:31",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/fastapi/fastapi",
+        "review_type": "Input Validation",
+        "risk_score": 0,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:38",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:40",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:45",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:46",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/PyCQA/bandit",
+        "review_type": "Input Validation",
+        "risk_score": 70,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:50",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    },
+    {
+        "repo": "https://github.com/pallets/flask",
+        "review_type": "Input Validation",
+        "risk_score": 100,
+        "pdf_path": "report.pdf",
+        "timestamp": "18-06-2026 15:53",
+        "submitted_by": "Developer",
+        "status": "Pending",
+        "manager_comment": ""
+    }
+]

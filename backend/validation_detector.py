@@ -21,7 +21,10 @@ def detect_validations(repo_path):
             ".java",
             ".js",
             ".ts",
-            ".py"
+            ".py",
+            ".php",
+            ".html",    
+            ".css"
         ]:
             continue
 
