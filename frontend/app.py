@@ -116,7 +116,8 @@ from datetime import datetime
 
 from backend.auth_store import (
     load_users,
-    save_users
+    save_users,
+    verify_password
 )
 
 from backend.logging_detector import (
@@ -127,136 +128,336 @@ from backend.whitelist_detector import (
     detect_whitelisting
 )
 
-st.set_page_config(
-    page_title="AI SSDLC Review Agent",
-    layout="wide"
-)
-if "logged_in" not in st.session_state:
+from backend.audit_trail import log_action
 
+from backend.rbac import has_permission
+
+st.set_page_config(
+    page_title="ReBIT Security Review Platform",
+    layout="wide",
+    page_icon="🔒"
+)
+
+# Custom CSS for ReBIT branding
+st.markdown("""
+<style>
+    .rebit-header {
+        background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .rebit-header h1 {
+        color: white;
+        margin: 0;
+        font-size: 2rem;
+    }
+    .rebit-header p {
+        color: rgba(255, 255, 255, 0.9);
+        margin: 0.5rem 0 0 0;
+    }
+    .role-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    .role-admin { background: #dcfce7; color: #16a34a; }
+    .role-auditor { background: #fef3c7; color: #d97706; }
+    .role-manager { background: #dbeafe; color: #2563eb; }
+    .role-developer { background: #f3f4f6; color: #4b5563; }
+    .stButton>button {
+        border-radius: 0.5rem;
+        font-weight: 600;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if "username" not in st.session_state:
-
     st.session_state.username = None
 
 if "role" not in st.session_state:
-
     st.session_state.role = None
-if not st.session_state.logged_in:
 
-    tab1, tab2 = st.tabs(
-        [
-            "Login",
-            "Register"
-        ]
-    )
+if not st.session_state.logged_in:
+    # Header for login page
+    st.markdown("""
+    <div class="rebit-header">
+        <h1>🔒 ReBIT Security Review Platform</h1>
+        <p>Enterprise AI-Powered SSDLC Security Review Agent</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    tab1, tab2 = st.tabs(["Login", "Register"])
 
     with tab1:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("### Welcome Back")
+            username = st.text_input("Username", key="login_user")
+            password = st.text_input("Password", type="password", key="login_pass")
 
-        username = st.text_input(
-            "Username",
-            key="login_user"
-        )
-
-        password = st.text_input(
-            "Password",
-            type="password",
-            key="login_pass"
-        )
-
-        if st.button(
-            "Login"
-        ):
-
-            users = load_users()
-
-            for user in users:
-
-                if (
-                    user["username"] == username
-                    and
-                    user["password"] == password
-                ):
-
+            if st.button("Login", type="primary", use_container_width=True):
+                users = load_users()
+                
+                # Try new password verification first
+                result = verify_password(username, password)
+                
+                if result:
                     st.session_state.logged_in = True
-
                     st.session_state.username = username
-
-                    st.session_state.role = user["role"]
-
+                    st.session_state.role = result["role"]
+                    
+                    # Log login action
+                    log_action(
+                        action_type="AUTH_LOGIN",
+                        user=username,
+                        details={"role": result["role"]}
+                    )
+                    
                     st.rerun()
-
-            st.error(
-                "Invalid credentials"
-            )
+                else:
+                    # Fallback to old method for backward compatibility
+                    for user in users:
+                        if ("password" in user and user["username"] == username and user["password"] == password):
+                            st.session_state.logged_in = True
+                            st.session_state.username = username
+                            st.session_state.role = user.get("role", "Developer")
+                            
+                            log_action(
+                                action_type="AUTH_LOGIN",
+                                user=username,
+                                details={"role": st.session_state.role, "method": "legacy"}
+                            )
+                            
+                            st.rerun()
+                    
+                    st.error("Invalid credentials")
+            
+            # Show default credentials hint
+            with st.expander("📝 Default Credentials"):
+                st.code("""
+Admin: admin / admin
+Developer: developer / developer
+Manager: manager / manager
+Auditor: auditor / auditor
+                """)
 
     with tab2:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("### Create Account")
+            new_user = st.text_input("Username", key="register_user")
+            new_pass = st.text_input("Password", type="password", key="register_pass")
+            confirm_pass = st.text_input("Confirm Password", type="password", key="confirm_pass")
 
-        new_user = st.text_input(
-            "Username",
-            key="register_user"
-        )
-
-        new_pass = st.text_input(
-            "Password",
-            type="password",
-            key="register_pass"
-        )
-
-        role = st.selectbox(
-            "Role",
-            [
-                "Developer",
-                "Manager"
-            ]
-        )
-
-        if st.button(
-            "Register"
-        ):
-
-            users = load_users()
-
-            users.append(
-                {
-                    "username": new_user,
-                    "password": new_pass,
-                    "role": role
-                }
+            role = st.selectbox(
+                "Role",
+                ["Developer", "Manager"],
+                help="Auditor and Admin roles must be created by an administrator"
             )
 
-            save_users(
-                users
-            )
-
-            st.success(
-                "Registration successful"
-            )
+            if st.button("Register", use_container_width=True):
+                if not new_user or not new_pass:
+                    st.error("Username and password are required")
+                elif new_pass != confirm_pass:
+                    st.error("Passwords do not match")
+                elif len(new_pass) < 6:
+                    st.error("Password must be at least 6 characters")
+                else:
+                    from backend.auth_store import create_user
+                    
+                    result = create_user(
+                        username=new_user,
+                        password=new_pass,
+                        role=role,
+                        created_by=new_user
+                    )
+                    
+                    if "error" in result:
+                        st.error(result["error"])
+                    else:
+                        st.success("Registration successful! Please login.")
+                        
+                        log_action(
+                            action_type="AUTH_REGISTER",
+                            user=new_user,
+                            details={"role": role}
+                        )
 
     st.stop()
-st.title(
-    "🔒 AI SSDLC Review Agent"
-)
-st.sidebar.success(
-    f"Logged in as {st.session_state.username}"
-)
 
-st.sidebar.write(
-    f"Role: {st.session_state.role}"
-)
+# ==========================================
+# AUTHENTICATED USER INTERFACE
+# ==========================================
 
-if st.sidebar.button(
-    "🚪 Logout"
-):
+# Role-based navigation
+available_pages = []
 
-    st.session_state.logged_in = False
+# All roles can access the main scanner
+available_pages.append("🔍 Security Scanner")
 
-    st.session_state.username = None
+# Developer specific
+if st.session_state.role in ["Developer", "Manager", "Admin"]:
+    available_pages.append("📊 My Dashboard")
 
-    st.session_state.role = None
+# Manager specific
+if st.session_state.role in ["Manager", "Admin"]:
+    available_pages.append("✅ Review Queue")
 
-    st.rerun()
-if st.session_state.role == "Developer":
+# Auditor specific  
+if st.session_state.role in ["Auditor", "Admin"]:
+    available_pages.append("🔍 Auditor Portal")
+
+# Admin specific
+if st.session_state.role == "Admin":
+    available_pages.append("⚙️ Admin Portal")
+
+# Set default page
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "🔍 Security Scanner"
+
+# Sidebar
+with st.sidebar:
+    # User info with branding
+    role_class = f"role-{st.session_state.role.lower()}"
+    st.markdown(f"""
+    <div style="padding: 1rem; background: #f0f9ff; border-radius: 0.5rem; margin-bottom: 1rem;">
+        <strong>👤 {st.session_state.username}</strong><br>
+        <span class="role-badge {role_class}">{st.session_state.role}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Navigation
+    st.session_state.current_page = st.radio(
+        "Navigation",
+        available_pages,
+        label_visibility="collapsed"
+    )
+    
+    st.divider()
+    
+    if st.button("🚪 Logout", use_container_width=True):
+        log_action(
+            action_type="AUTH_LOGOUT",
+            user=st.session_state.username,
+            details={"role": st.session_state.role}
+        )
+        
+        st.session_state.logged_in = False
+        st.session_state.username = None
+        st.session_state.role = None
+        st.session_state.current_page = None
+        st.rerun()
+
+# ==========================================
+# PAGE ROUTING
+# ==========================================
+
+if st.session_state.current_page == "🔍 Auditor Portal":
+    # Redirect to auditor portal
+    import subprocess
+    import sys
+    st.info("Redirecting to Auditor Portal...")
+    subprocess.run([sys.executable, "-m", "streamlit", "run", "frontend/auditor.py"])
+elif st.session_state.current_page == "⚙️ Admin Portal":
+    # Redirect to admin portal
+    import subprocess
+    import sys
+    st.info("Redirecting to Admin Portal...")
+    subprocess.run([sys.executable, "-m", "streamlit", "run", "frontend/admin.py"])
+elif st.session_state.current_page == "✅ Review Queue":
+    # Show manager review queue inline
+    from backend.review_store import load_reviews, save_reviews
+    
+    reviews = load_reviews() or []
+    
+    st.title("✅ Review Queue")
+    
+    filter_status = st.selectbox(
+        "Filter by Status",
+        ["All", "Pending", "Approved", "Rejected"]
+    )
+    
+    pending = len([r for r in reviews if r.get("status") == "Pending"])
+    approved = len([r for r in reviews if r.get("status") == "Approved"])
+    rejected = len([r for r in reviews if r.get("status") == "Rejected"])
+    
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Pending Reviews", pending)
+    c2.metric("Approved Reviews", approved)
+    c3.metric("Rejected Reviews", rejected)
+    
+    filtered_reviews = reviews.copy()
+    if filter_status != "All":
+        filtered_reviews = [r for r in reviews if r.get("status") == filter_status]
+    
+    for i, review in enumerate(filtered_reviews):
+        with st.expander(
+            f"{review.get('repo', 'Unknown Repo')[:60]} - {review.get('review_type', 'N/A')}"
+        ):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**Review Type:** {review.get('review_type', 'N/A')}")
+                st.write(f"**Risk Score:** {review.get('risk_score', 'N/A')}")
+                st.write(f"**Submitted:** {review.get('timestamp', 'N/A')}")
+                st.write(f"**Submitted By:** {review.get('submitted_by', 'N/A')}")
+            
+            with col2:
+                st.write(f"**Status:** {review.get('status', 'Pending')}")
+                st.write(f"**Manager Comment:** {review.get('manager_comment', 'None')}")
+                
+                pdf_path = review.get("pdf_path")
+                if pdf_path:
+                    try:
+                        with open(pdf_path, "rb") as pdf_file:
+                            st.download_button(
+                                "📄 Download Report",
+                                pdf_file,
+                                file_name=f"Review_Report_{i}.pdf",
+                                mime="application/pdf",
+                                key=f"pdf_{i}"
+                            )
+                    except:
+                        st.warning("Report not found")
+            
+            status = st.selectbox(
+                "Status",
+                ["Pending", "Approved", "Rejected"],
+                key=f"status_{i}"
+            )
+            
+            comment = st.text_area(
+                "Manager Comment",
+                value=review.get("manager_comment", ""),
+                key=f"comment_{i}"
+            )
+            
+            review["status"] = status
+            review["manager_comment"] = comment
+            
+            st.divider()
+    
+    if st.button("💾 Save Reviews", key="save_reviews_btn"):
+        save_reviews(reviews)
+        st.success("Reviews Saved")
+        
+        log_action(
+            action_type="REVIEW_SAVE",
+            user=st.session_state.username,
+            details={"count": len(reviews)}
+        )
+
+else:
+    # Default: Security Scanner (Developer view)
+    if st.session_state.role == "Developer":
  repo_url = st.text_input(
     "GitHub Repository URL"
  )
