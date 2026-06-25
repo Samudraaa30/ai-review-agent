@@ -1,0 +1,21 @@
+{
+    "session_id": "6bb87a1ee5e4",
+    "repository": "28cb4299-4676-4a55-8204-ddf065c01d5b",
+    "risk_score": 100,
+    "summary": "Executive summary unavailable.",
+    "total_findings": 222,
+    "findings": [
+        {
+            "id": "4986ab70",
+            "severity": "HIGH",
+            "title": "Token detected",
+            "description": "AI Review Failed",
+            "why_vulnerable": "AI Review Failed",
+            "business_impact": "HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/generate (Caused by NewConnectionError(\"HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [Errno 111] Connection refused\"))",
+            "technical_impact": "",
+            "owasp_top10": "",
+            "owasp_asvs": "",
+            "cwe": "",
+            "confidence_score": 0,
+            "recommendation": "Verify Ollama and Qwen model.",
+            "snippet": 

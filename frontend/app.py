@@ -269,8 +269,8 @@ def get_status_badge(status: ReviewStatus, stage: ReviewStage) -> str:
         return '<span class="stat-badge stat-failed">Failed</span>'
     return '<span class="stat-badge stat-queued">Queued</span>'
 
-def render_finding_traceability_card(f: AIFinding, session: 'ReviewSession'):
-    status_key = f"status_{f.id}"
+def render_finding_traceability_card(f: AIFinding, session):
+    status_key = f"btn_{f.id}_{id(f)}"
     current_f_status = st.session_state.finding_statuses.get(f.id, "Open")
     
     st.markdown(f"""
@@ -310,7 +310,12 @@ def render_finding_traceability_card(f: AIFinding, session: 'ReviewSession'):
             
         with tab3:
             st.markdown("Update the status of this finding across the Enterprise SSDLC registry.")
-            new_status = st.selectbox("Finding Status", ["Open", "In Review", "Resolved", "False Positive"], index=["Open", "In Review", "Resolved", "False Positive"].index(current_f_status), key=f"sel_{f.id}")
+            new_status = st.selectbox(
+              "Finding Status",
+              ["Open", "In Review", "Resolved", "False Positive"],
+              index=["Open", "In Review", "Resolved", "False Positive"].index(current_f_status),
+              key=f"sel_{f.id}_{id(f)}"
+            )
             if new_status != current_f_status:
                 st.session_state.finding_statuses[f.id] = new_status
                 st.rerun()

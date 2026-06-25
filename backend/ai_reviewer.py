@@ -1,20 +1,20 @@
 import json
 import os
 
-import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5-coder:7b")
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
+)
+
+MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-coder:free")
 
 
 def review_finding(finding: dict) -> dict:
-    """
-    Sends a security finding to Qwen for AI reasoning.
-    """
-
     prompt = f"""
 You are an expert cybersecurity code reviewer.
 
@@ -23,7 +23,7 @@ Analyze the following security finding.
 Finding:
 {json.dumps(finding, indent=2)}
 
-Return ONLY valid JSON in this format:
+Return ONLY valid JSON in this exact format:
 
 {{
     "risk": "...",
@@ -35,32 +35,41 @@ Return ONLY valid JSON in this format:
     "confidence": 95
 }}
 
-Do not include markdown.
-Do not explain anything outside JSON.
+Do not use markdown.
+Return only valid JSON.
 """
 
     try:
-        response = requests.post(
-            f"{OLLAMA_HOST}/api/generate",
-            json={
-                "model": LLM_MODEL,
-                "prompt": prompt,
-                "stream": False,
-            },
-            timeout=180,
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an OWASP ASVS cybersecurity expert."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.2,
+            max_tokens=600,
         )
 
-        response.raise_for_status()
+        text = response.choices[0].message.content.strip()
 
-        result = response.json()["response"].strip()
+        # Remove markdown code fences if present
+        if text.startswith("```"):
+            lines = text.splitlines()
+            text = "\n".join(lines[1:-1]).strip()
 
-        return json.loads(result)
+        return json.loads(text)
 
     except Exception as e:
         return {
             "risk": "AI Review Failed",
             "impact": str(e),
-            "remediation": "Verify Ollama is running and the Qwen model is installed.",
+            "remediation": "Verify your OpenRouter API key, model name, and internet connection.",
             "severity": finding.get("severity", "UNKNOWN"),
             "owasp": "",
             "asvs": "",

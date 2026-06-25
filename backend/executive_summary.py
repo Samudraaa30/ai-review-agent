@@ -1,45 +1,57 @@
+import json
 import os
+
 from dotenv import load_dotenv
-from google import genai
+from openai import OpenAI
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1",
 )
 
-def generate_summary(
-    findings,
-    sources,
-    validations,
-    sinks
-):
+MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-coder:free")
+
+
+def generate_summary(findings):
 
     prompt = f"""
-Generate an executive cybersecurity review.
+You are a senior ReBIT cybersecurity auditor.
 
-Sources Found: {sources}
-Validations Found: {validations}
-Sinks Found: {sinks}
-Findings Count: {len(findings)}
+Generate an executive summary for senior management based on the following findings.
 
-Provide:
+Findings:
+{json.dumps(findings, indent=2)}
 
-1. Overall Risk Rating
-2. Key Observations
-3. Top Recommendations
+Return a concise report with:
 
-Keep under 200 words.
+1. Overall Security Posture
+2. Critical Risks
+3. Business Impact
+4. Priority Recommendations
+
+Keep it under 200 words.
 """
 
     try:
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a senior cybersecurity auditor."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.2,
+            max_tokens=400,
         )
 
-        return response.text
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
         return f"Summary Generation Failed: {e}"

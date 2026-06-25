@@ -3,10 +3,14 @@ import json
 import time
 import logging
 from datetime import datetime
+import traceback
 from typing import List, Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass, asdict
 import hashlib
+import traceback
+
+from jupyter_client import session
 
 # Core application detectors
 from backend.secret_detector import detect_secrets
@@ -157,6 +161,7 @@ def run_bandit(files_path):
             })
         return findings
     except Exception:
+        traceback.print_exc()
         return []
 
 # --- Qwen AI Reasoning Engine ---
@@ -168,14 +173,26 @@ def generate_qwen_reasoning(tool_findings, files):
     ai_findings = []
 
     for finding in tool_findings:
-        review = QwenAgent.review_finding(finding)
+         import pprint
 
-        ai_findings.append(
+         print("\n" + "=" * 80)
+         print("FINDING KEYS:")
+         print(finding.keys())
+         print("FULL FINDING:")
+         pprint.pprint(finding)
+         print("=" * 80 + "\n")
+
+         review = QwenAgent.review_finding(finding)
+
+         ai_findings.append(
             AIFinding(
                 id=hashlib.md5(f"{finding['file']}{finding['line']}".encode()).hexdigest()[:8],
                 severity=review.get("severity", finding.get("severity", "MEDIUM")),
-                title=finding["issue"],
-                description=review.get("risk", finding["issue"]),
+                title=finding.get("issue", "Security Finding"),
+                description=review.get(
+                 "risk",
+                 finding.get("issue", "Security finding detected")
+                ),
                 why_vulnerable=review.get("risk", ""),
                 business_impact=review.get("business_impact", ""),
                 technical_impact=review.get("technical_impact", ""),
@@ -190,7 +207,7 @@ def generate_qwen_reasoning(tool_findings, files):
                     start_line=finding["line"],
                     end_line=finding["line"],
                     code=finding["code"],
-                    vulnerability_type=finding["issue"]
+                    vulnerability_type=finding.get("issue", "Security Finding")
                 ),
                 evidence="Generated using Qwen AI."
             )
@@ -375,11 +392,11 @@ class WorkflowManager:
             ])
             
             generate_report(
-                session_id=session.id,
-                repository=session.intelligence.name if session.intelligence else "Unknown",
-                findings=session.findings,
-                risk_score=session.risk_score,
-                summary=session.executive_summary
+             session_id=session.id,
+             repository=session.intelligence.name if session.intelligence else "Unknown",
+             findings=session.findings,
+             risk_score=session.risk_score,
+             summary=session.executive_summary
             )
             
             session.updated_at = datetime.now().isoformat()
@@ -388,13 +405,15 @@ class WorkflowManager:
             logger.info(f"Review {session_id} completed successfully.")
             return session
 
-        except Exception as e:
-            session.status = ReviewStatus.FAILED
-            session.error_message = str(e)
-            session.updated_at = datetime.now().isoformat()
-            review_store[session_id] = session
-            logger.error(f"Review {session_id} failed: {e}")
-            return session
+        except Exception:
+           traceback.print_exc()
+           
+           session.status = ReviewStatus.FAILED
+           session.error_message = str(e)
+           session.updated_at = datetime.now().isoformat()
+           review_store[session_id] = session
+           logger.exception(f"Review {session_id} failed")
+           return session
 
     @staticmethod
     def get_all_reviews(user_email: str, role: str) -> List[ReviewSession]:
