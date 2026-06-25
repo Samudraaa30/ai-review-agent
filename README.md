@@ -1,163 +1,145 @@
-# AI SSDLC Review Assistant
+# ReBIT AI SSDLC Review Platform
 
-## Overview
+Enterprise-grade AI-powered Secure SDLC Review Platform for security assessments.
 
-AI SSDLC Review Assistant is an intelligent cybersecurity review platform that automates secure code review workflows traditionally performed through Excel-based assessments.
+## 🚀 Features
 
-The platform performs repository scanning, risk analysis, security findings generation, AI-assisted reasoning, report generation, and manager approval workflows.
+- **Role-Based Access**: Developer and Manager roles with specific permissions
+- **7-Stage Workflow**: Structured review process from intelligence to report
+- **Qwen AI Reasoning**: Enterprise-grade vulnerability analysis with OWASP mapping
+- **Security Tools**: Integrated Bandit and Semgrep simulation
+- **Manager Review Queue**: Approve/reject workflow for completed scans
+- **Professional UI**: Modern Streamlit interface with metrics and charts
 
----
+## 📋 Requirements
 
-## Features
+- Python 3.8+
+- Streamlit
 
-### Developer Portal
+## 🛠️ Installation
 
-* Repository URL Submission
-* Input Validation Review
-* Authentication Review
-* Authorization Review
-* Secrets Detection
-* Dependency Security Review
-* Logging & Monitoring Review
-* AI File Selection
-* Risk Scoring
-* PDF Report Generation
-* HTML Report Generation
-* Manager Feedback View
+```bash
+pip install streamlit
+```
 
-### Manager Portal
+## 🏃 Running the Application
 
-* Review Queue
-* Approve / Reject Reviews
-* Manager Comments
-* Dashboard Metrics
-* Review History
+```bash
+streamlit run frontend/app.py
+```
 
----
+The application will start at `http://localhost:8501`
 
-## Architecture
+## 👥 Demo Credentials
 
-Repository Submission
+**Developer:**
+- Email: `developer@rebit.com`
+- Role: Developer
 
-↓
+**Manager:**
+- Email: `manager@rebit.com`
+- Role: Manager
 
-Repository Indexer
+## 🔄 Application Workflow
 
-↓
+1. **Login** → Select role (Developer/Manager)
+2. **Dashboard** → View metrics and recent scans
+3. **New Scan** (Developer) → Enter repository URL
+4. **Progressive Stages**:
+   - Repository Intelligence
+   - Relevant Files
+   - Relevant Functions
+   - Code Snippets
+   - Security Tool Findings
+   - Qwen AI Reasoning
+   - Executive Summary
+5. **Review Queue** (Manager) → Approve/Reject scans
+6. **History** → View past scans and feedback
 
-AI Reasoning Agent
+## 📁 Project Structure
 
-↓
+```
+/workspace
+├── backend/
+│   └── workflow_engine.py    # Core workflow logic, AI reasoning, data models
+├── frontend/
+│   └── app.py                # Streamlit UI
+└── README.md
+```
 
-Security Tools
+## 🔒 Security Features
 
-↓
+- **OWASP Top 10 Mapping**: Every finding mapped to OWASP categories
+- **ASVS Compliance**: Application Security Verification Standard mapping
+- **CWE Identification**: Common Weakness Enumeration codes
+- **Risk Scoring**: Automated calculation based on severity
+- **Code Traceability**: Direct links from findings to vulnerable code
 
-Findings Engine
+## 🧪 Testing
 
-↓
+Run the backend tests:
+```bash
+python -c "from backend.workflow_engine import WorkflowManager; print('OK')"
+```
 
-Risk Engine
+## 📊 Dashboard Metrics
 
-↓
+- Total Scans
+- Completed Reviews
+- Average Risk Score
+- Critical Findings Count
 
-Report Generator
+## 🎯 Key Capabilities
 
-↓
+### Developer
+- Submit repositories for review
+- View real-time scan progress
+- Inspect AI findings with code snippets
+- Download reports
+- View scan history
 
-Manager Review Workflow
+### Manager
+- Access all repository reviews
+- Review queue with approve/reject actions
+- Team-wide risk analytics
+- Provide feedback on scans
 
----
+## 🤖 Qwen AI Integration
 
-## Tech Stack
+The platform uses a Qwen-style reasoning engine that provides:
+- **Why Vulnerable**: Explanation of the security flaw
+- **Business Impact**: Potential organizational damage
+- **Technical Impact**: System-level consequences
+- **Recommendations**: Actionable remediation steps
+- **Confidence Scores**: Reliability assessment
 
-Frontend:
+## 📝 Example Finding Output
 
-* Streamlit
+```
+CRITICAL: SQL Injection risk
+Confidence: 92% | CWE: CWE-89
 
-Backend:
+🧠 AI Reasoning
+Why Vulnerable: The code lacks proper input validation...
+Business Impact: Could lead to unauthorized access...
+Technical Impact: Attackers could execute arbitrary code...
 
-* Python
+🛡️ OWASP Mapping
+Top 10: A03:2021 – Injection
+ASVS: V5: Input Validation
 
-AI:
+✅ Recommendation
+Refactor to use parameterized queries...
+```
 
-* Google Gemini / LLM Integration
+## 🚧 Future Enhancements
 
-Security Tools:
-
-* Semgrep
-* Custom Static Analysis Rules
-
-Storage:
-
-* JSON-based Persistence
-
----
-
-## Project Structure
-
-frontend/
-
-* app.py
-
-backend/
-
-* repository_indexer.py
-* review_store.py
-* auth_store.py
-* reasoning_agent.py
-* risk_engine.py
-
-users.json
-reviews.json
-
-README.md
-
----
-
-## Workflow
-
-Developer
-
-↓
-
-Submit Repository
-
-↓
-
-Generate Findings
-
-↓
-
-Generate Report
-
-↓
-
-Manager Review
-
-↓
-
-Approve / Reject
-
-↓
-
-Developer Receives Feedback
+- Real GitHub integration
+- PDF report generation
+- WebSocket real-time updates
+- Additional security tools (Gitleaks, pip-audit)
+- Jira/Slack integrations
 
 ---
 
-## Future Enhancements
-
-* PostgreSQL Integration
-* Role Based Access Control
-* OpenAI / OpenRouter Support
-* Team Management
-* Audit Logging
-* Enterprise Dashboard
-
----
-
-## Author
-
-Rashi Manjrekar
-Electronics and Computer Science Engineering
-Vidyalankar Institute of Technology
+**Built for ReBIT Internship Demonstration**
