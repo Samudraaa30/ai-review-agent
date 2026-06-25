@@ -25,13 +25,19 @@ def detect_dependencies(
             )
 
             findings.append(
-                {
-                    "file": str(file),
-                    "issue":
-                        "Dependency manifest detected",
-                    "content":
-                        content[:1000]
-                }
+              {
+                "rule": "DEPENDENCY",
+
+                "severity": "LOW",
+   
+                "issue": "Dependency manifest detected",
+
+                "file": str(file),
+
+                "line": 1,
+
+                "code": content[:1000]
+              }
             )
 
         except Exception:

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from jupyter_core.version import pattern
+
 VALIDATION_PATTERNS = [
     "@Valid",
     "validator",
@@ -44,14 +46,21 @@ def detect_validations(repo_path):
 
                     if validation in line:
 
-                        findings.append(
-                            {
-                                "file": str(file),
-                                "line": line_num,
-                                "validation": validation,
-                                "code": line.strip()
-                            }
-                        )
+                       findings.append(
+    {
+        "rule": "VALIDATION",
+
+        "severity": "INFO",
+
+        "issue": f"Validation pattern detected ({validation})",
+
+        "file": str(file),
+
+        "line": line_num,
+
+        "code": line.strip()
+    }
+)
 
         except Exception:
             pass

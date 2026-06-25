@@ -43,14 +43,21 @@ def detect_secrets(repo_path):
                         re.IGNORECASE
                     ):
 
-                        findings.append(
-                            {
-                                "file": str(file),
-                                "line": line_num,
-                                "type": secret_type,
-                                "code": line.strip()
-                            }
-                        )
+                       findings.append(
+                    {
+                      "rule": "SECRET",
+
+                      "severity": "HIGH",
+
+                      "issue": f"{secret_type} detected",
+
+                      "file": str(file),
+
+                      "line": line_num,
+
+                      "code": line.strip()
+                    }
+                )
 
         except Exception:
             pass

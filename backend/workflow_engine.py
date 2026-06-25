@@ -1,8 +1,3 @@
-"""
-ReBIT AI SSDLC Review Platform - Core Workflow Engine
-Handles the 7-stage review process, Qwen AI integration, and Role-Based Access.
-"""
-
 import os
 import json
 import time
@@ -12,6 +7,21 @@ from typing import List, Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass, asdict
 import hashlib
+
+# Core application detectors
+from backend.secret_detector import detect_secrets
+from backend.validation_detector import detect_validations
+from backend.source_detector import detect_sources
+from backend.sink_detector import detect_sinks
+from backend.auth_detector import detect_auth
+from backend.authorization_detector import detect_authorization
+from backend.dependency_detector import detect_dependencies
+from backend.snippet_extractor import extract_relevant_snippets
+from backend.qwen_agent import QwenAgent
+from backend.clone_repo import clone_repository
+from backend.ai_reasoning_agent import select_relevant_files_ai
+from backend.report_generator import generate_report
+from pathlib import Path
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
@@ -103,7 +113,6 @@ class ReviewSession:
     error_message: Optional[str]
 
 # --- Mock Database (In-Memory for Demo Stability) ---
-# In a real production app, this would be SQLite/PostgreSQL
 review_store: Dict[str, ReviewSession] = {}
 
 def generate_session_id(repo_url: str, user_email: str) -> str:
@@ -113,99 +122,79 @@ def generate_session_id(repo_url: str, user_email: str) -> str:
 
 # --- Security Tool Simulators (Stable Mocks) ---
 
-def run_bandit_mock(files: List[str]) -> List[Dict]:
-    """Simulates Bandit output for demo stability."""
-    findings = []
-    if any("login" in f or "auth" in f for f in files):
-        findings.append({
-            "rule": "B106", "severity": "MEDIUM", "issue": "Hardcoded password",
-            "file": next((f for f in files if "auth" in f), files[0]),
-            "line": 15, "code": "password = 'admin123'"
-        })
-    if any("request" in f for f in files):
-        findings.append({
-            "rule": "B324", "severity": "HIGH", "issue": "Use of weak MD5 hash",
-            "file": next((f for f in files if "hash" in f or "util" in f), files[0]),
-            "line": 42, "code": "hashlib.md5(data)"
-        })
-    return findings
+import subprocess
 
-def run_semgrep_mock(files: List[str]) -> List[Dict]:
-    """Simulates Semgrep output."""
-    findings = []
-    if any("api" in f for f in files):
-        findings.append({
-            "rule": "sql-injection", "severity": "CRITICAL", "issue": "SQL Injection risk",
-            "file": next((f for f in files if "api" in f or "db" in f), files[0]),
-            "line": 88, "code": "cursor.execute(f'SELECT * FROM users WHERE id = {user_id}')"
-        })
-    return findings
+def run_bandit(files_path):
+    """
+    Run Bandit on the cloned repository.
+    """
+    if not files_path:
+        return []
+
+    repo_root = os.path.dirname(files_path) if os.path.isfile(files_path) else files_path
+
+    try:
+        result = subprocess.run(
+            ["bandit", "-r", repo_root, "-f", "json"],
+            capture_output=True,
+            text=True
+        )
+
+        if not result.stdout:
+            return []
+
+        report = json.loads(result.stdout)
+        findings = []
+
+        for issue in report.get("results", []):
+            findings.append({
+                "rule": issue.get("test_id"),
+                "severity": issue.get("issue_severity"),
+                "issue": issue.get("issue_text"),
+                "file": issue.get("filename"),
+                "line": issue.get("line_number"),
+                "code": issue.get("code", "")
+            })
+        return findings
+    except Exception:
+        return []
 
 # --- Qwen AI Reasoning Engine ---
 
-def generate_qwen_reasoning(tool_findings: List[Dict], files: List[str]) -> List[AIFinding]:
+def generate_qwen_reasoning(tool_findings, files):
     """
-    Transforms raw tool findings into enterprise-grade AI reasoning.
-    Mimics Qwen's analysis without requiring an external API key for the demo.
+    Uses the real Qwen model to enrich security findings.
     """
     ai_findings = []
-    
+
     for finding in tool_findings:
-        # Generate deterministic ID
-        f_id = hashlib.md5(f"{finding['file']}{finding['line']}".encode()).hexdigest()[:8]
-        
-        # Enrich with Qwen-style reasoning
-        ai_finding = AIFinding(
-            id=f_id,
-            severity=finding['severity'],
-            title=finding['issue'],
-            description=f"The code in {finding['file']} contains a potential {finding['issue']}.",
-            why_vulnerable="The code lacks proper input validation and uses insecure patterns detected by static analysis.",
-            business_impact="Could lead to unauthorized access, data breach, or system compromise depending on exploitability.",
-            technical_impact="Attackers could execute arbitrary code, bypass authentication, or extract sensitive data.",
-            owasp_top10="A03:2021 – Injection" if "SQL" in finding['issue'] else "A07:2021 – Identification and Authentication Failures",
-            owasp_asvs="V5: Input Validation" if "SQL" in finding['issue'] else "V2: Authentication",
-            cwe="CWE-89" if "SQL" in finding['issue'] else "CWE-259",
-            confidence_score=92 if finding['severity'] == "CRITICAL" else 85,
-            recommendation="Refactor to use parameterized queries and implement secure hashing algorithms.",
-            snippet=CodeSnippet(
-                file_path=finding['file'],
-                function_name="process_request",
-                start_line=finding['line'],
-                end_line=finding['line'] + 2,
-                code=finding['code'],
-                vulnerability_type=finding['issue']
-            ),
-            evidence=f"Detected by pattern matching on line {finding['line']}."
+        review = QwenAgent.review_finding(finding)
+
+        ai_findings.append(
+            AIFinding(
+                id=hashlib.md5(f"{finding['file']}{finding['line']}".encode()).hexdigest()[:8],
+                severity=review.get("severity", finding.get("severity", "MEDIUM")),
+                title=finding["issue"],
+                description=review.get("risk", finding["issue"]),
+                why_vulnerable=review.get("risk", ""),
+                business_impact=review.get("business_impact", ""),
+                technical_impact=review.get("technical_impact", ""),
+                owasp_top10=review.get("owasp", ""),
+                owasp_asvs=review.get("asvs", ""),
+                cwe="",
+                confidence_score=review.get("confidence", 80),
+                recommendation=review.get("recommendation", ""),
+                snippet=CodeSnippet(
+                    file_path=finding["file"],
+                    function_name="Unknown",
+                    start_line=finding["line"],
+                    end_line=finding["line"],
+                    code=finding["code"],
+                    vulnerability_type=finding["issue"]
+                ),
+                evidence="Generated using Qwen AI."
+            )
         )
-        ai_findings.append(ai_finding)
-    
-    # Add a generic architectural finding if no tools fired (for demo completeness)
-    if not ai_findings:
-        ai_findings.append(AIFinding(
-            id="arch-01",
-            severity="LOW",
-            title="Missing Security Headers",
-            description="No security headers detected in configuration files.",
-            why_vulnerable="Default configurations often omit protective headers.",
-            business_impact="Increased risk of XSS and Clickjacking attacks.",
-            technical_impact="Browser-side vulnerabilities may be exploitable.",
-            owasp_top10="A05:2021 – Security Misconfiguration",
-            owasp_asvs="V7: Error Handling and Logging",
-            cwe="CWE-693",
-            confidence_score=75,
-            recommendation="Add Content-Security-Policy and X-Frame-Options headers.",
-            snippet=CodeSnippet(
-                file_path="config/nginx.conf",
-                function_name="server_block",
-                start_line=10,
-                end_line=12,
-                code="server {\n    listen 80;\n}",
-                vulnerability_type="Misconfiguration"
-            ),
-            evidence="Configuration file analysis."
-        ))
-        
     return ai_findings
 
 # --- Main Workflow Manager ---
@@ -244,44 +233,94 @@ class WorkflowManager:
             raise ValueError("Session not found")
         
         session = review_store[session_id]
+        repo_path = clone_repository(session.repo_url)
+        
         try:
             # Stage 1: Repository Intelligence
             session.current_stage = ReviewStage.INIT
             session.progress_percent = 15
-            # Mock Intelligence Data
+            
+            scan_start = time.time()
+
+            all_repo_files = [f for f in Path(repo_path).rglob("*") if f.is_file()]
+            python_files = list(Path(repo_path).rglob("*.py"))
+            java_files = list(Path(repo_path).rglob("*.java"))
+            js_files = list(Path(repo_path).rglob("*.js"))
+            ts_files = list(Path(repo_path).rglob("*.ts"))
+
+            if len(java_files) > max(len(python_files), len(js_files), len(ts_files)):
+                language = "Java"
+            elif len(js_files) > max(len(python_files), len(java_files), len(ts_files)):
+                language = "JavaScript"
+            elif len(ts_files) > max(len(python_files), len(java_files), len(js_files)):
+                language = "TypeScript"
+            else:
+                language = "Python"
+
+            framework = "Unknown"
+            if Path(repo_path, "package.json").exists():
+                framework = "Node.js"
+            elif Path(repo_path, "pom.xml").exists():
+                framework = "Spring Boot"
+            elif Path(repo_path, "requirements.txt").exists():
+                framework = "Python"
+
             session.intelligence = RepositoryIntelligence(
-                name=session.repo_url.split("/")[-1],
+                name=Path(repo_path).name,
                 url=session.repo_url,
-                primary_language="Python",
-                framework="Flask/FastAPI",
-                files_scanned=45,
-                relevant_files_count=5,
-                relevant_snippets_count=8,
-                dependencies=["requests==2.28.0", "flask==2.0.1", "numpy==1.21.0"],
-                scan_duration=2.4
+                primary_language=language,
+                framework=framework,
+                files_scanned=len(all_repo_files),
+                relevant_files_count=len(session.relevant_files),
+                relevant_snippets_count=len(session.snippets),
+                dependencies=[],
+                scan_duration=round(time.time() - scan_start, 2)
             )
             review_store[session_id] = session
-            time.sleep(0.5) # Simulate work
+            time.sleep(0.5)
 
             # Stage 2 & 3: Relevant Files & Functions
             session.current_stage = ReviewStage.FILES
             session.progress_percent = 35
-            session.relevant_files = [
-                RelevantFile("app/auth.py", 95.5, "Contains authentication logic", 2, ["login", "verify_token"]),
-                RelevantFile("app/api/users.py", 88.2, "Direct database interaction", 1, ["get_user"]),
-                RelevantFile("utils/crypto.py", 76.0, "Cryptographic operations", 1, ["hash_password"])
-            ]
+
+            all_files = [str(f) for f in Path(repo_path).rglob("*") if f.is_file()]
+            selected_files = select_relevant_files_ai(all_files, session.review_types[0])
+
+            session.relevant_files = []
+            for file in selected_files:
+                session.relevant_files.append(
+                    RelevantFile(
+                        path=file,
+                        relevance_score=90,
+                        reason="Selected by Qwen AI",
+                        findings_count=0,
+                        functions_reviewed=[]
+                    )
+                )
+
             review_store[session_id] = session
             time.sleep(0.5)
 
             # Stage 4: Snippets
             session.current_stage = ReviewStage.SNIPPETS
             session.progress_percent = 50
-            # Snippets extracted based on files above
-            session.snippets = [
-                CodeSnippet("app/auth.py", "login", 15, 17, "password = 'admin123'", "Hardcoded Secret"),
-                CodeSnippet("app/api/users.py", "get_user", 88, 90, "cursor.execute(f'SELECT...')", "SQL Injection")
-            ]
+            
+            session.snippets = []
+            selected_paths = [file.path for file in session.relevant_files]
+            extracted_snippets = extract_relevant_snippets(selected_paths)
+
+            for snippet in extracted_snippets:
+                session.snippets.append(
+                    CodeSnippet(
+                        file_path=snippet["file"],
+                        function_name="Unknown",
+                        start_line=1,
+                        end_line=20,
+                        code=snippet["snippet"],
+                        vulnerability_type="Unknown"
+                    )
+                )
+            
             review_store[session_id] = session
             time.sleep(0.5)
 
@@ -289,7 +328,17 @@ class WorkflowManager:
             session.current_stage = ReviewStage.TOOLS
             session.progress_percent = 65
             file_paths = [f.path for f in session.relevant_files]
-            raw_findings = run_bandit_mock(file_paths) + run_semgrep_mock(file_paths)
+
+            raw_findings = []
+            raw_findings.extend(run_bandit(repo_path))
+            raw_findings.extend(detect_secrets(repo_path))
+            raw_findings.extend(detect_auth(repo_path))
+            raw_findings.extend(detect_authorization(repo_path))
+            raw_findings.extend(detect_validations(repo_path))
+            raw_findings.extend(detect_sources(repo_path))
+            raw_findings.extend(detect_sinks(repo_path))
+            raw_findings.extend(detect_dependencies(repo_path))
+            
             review_store[session_id] = session
             time.sleep(0.5)
 
@@ -297,11 +346,16 @@ class WorkflowManager:
             session.current_stage = ReviewStage.AI_REASONING
             session.progress_percent = 85
             session.findings = generate_qwen_reasoning(raw_findings, file_paths)
-            
+
             # Calculate Risk Score
             critical = sum(1 for f in session.findings if f.severity == "CRITICAL")
             high = sum(1 for f in session.findings if f.severity == "HIGH")
-            session.risk_score = min(100, (critical * 30) + (high * 15))
+            medium = sum(1 for f in session.findings if f.severity == "MEDIUM")
+            low = sum(1 for f in session.findings if f.severity == "LOW")
+
+            score = (critical * 25 + high * 15 + medium * 8 + low * 3)
+            session.risk_score = min(score, 100)
+            
             review_store[session_id] = session
             time.sleep(0.5)
 
@@ -309,15 +363,28 @@ class WorkflowManager:
             session.current_stage = ReviewStage.FINAL
             session.progress_percent = 100
             session.status = ReviewStatus.COMPLETED
-            session.executive_summary = (
-                f"Security review completed for {session.intelligence.name}. "
-                f"Identified {len(session.findings)} potential vulnerabilities. "
-                f"Overall Risk Score: {session.risk_score}/100. "
-                "Immediate attention required for SQL Injection and Hardcoded Secrets."
+            
+            session.executive_summary = QwenAgent.summarize([
+                {
+                    "severity": f.severity,
+                    "title": f.title,
+                    "description": f.description,
+                    "recommendation": f.recommendation
+                }
+                for f in session.findings
+            ])
+            
+            generate_report(
+                session_id=session.id,
+                repository=session.intelligence.name if session.intelligence else "Unknown",
+                findings=session.findings,
+                risk_score=session.risk_score,
+                summary=session.executive_summary
             )
+            
             session.updated_at = datetime.now().isoformat()
             review_store[session_id] = session
-            
+
             logger.info(f"Review {session_id} completed successfully.")
             return session
 
@@ -336,7 +403,7 @@ class WorkflowManager:
         if role == "Developer":
             return [r for r in all_reviews if r.user_email == user_email]
         elif role == "Manager":
-            return all_reviews # Manager sees all
+            return all_reviews  # Manager sees all
         return []
 
     @staticmethod

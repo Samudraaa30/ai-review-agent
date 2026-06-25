@@ -1,44 +1,28 @@
-import os
-from dotenv import load_dotenv
-from google import genai
+from backend.qwen_agent import QwenAgent
 
-load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv(
-        "GEMINI_API_KEY"
-    )
-)
-
-def review_chunk(
-    chunk
-):
+def review_chunk(chunk: str) -> str:
+    """
+    AI review of a code chunk using Qwen.
+    """
 
     prompt = f"""
-You are a cybersecurity reviewer.
+You are an expert cybersecurity code reviewer.
 
-Review this code chunk.
+Review this code.
 
-Identify:
+Return:
 
 1. Security Risks
-2. Impact
-3. Recommendation
+2. Business Impact
+3. Technical Impact
+4. OWASP Top 10
+5. OWASP ASVS
+6. Recommendations
 
 Code:
 
 {chunk}
 """
 
-    try:
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
-
-        return response.text
-
-    except Exception as e:
-
-        return f"Review Failed: {e}"
+    return QwenAgent.generate(prompt)

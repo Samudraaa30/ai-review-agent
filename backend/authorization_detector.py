@@ -49,13 +49,20 @@ def detect_authorization(repo_path):
                     if pattern in line:
 
                         findings.append(
-                            {
-                                "file": str(file),
-                                "line": line_num,
-                                "type": pattern,
-                                "code": line.strip()
-                            }
-                        )
+    {
+        "rule": "AUTHZ",
+
+        "severity": "INFO",
+
+        "issue": f"Authorization pattern detected ({pattern})",
+
+        "file": str(file),
+
+        "line": line_num,
+
+        "code": line.strip()
+    }
+)
 
         except Exception:
             pass
