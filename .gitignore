@@ -1,14 +1,5 @@
-```gitignore
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment
-.env
-.env.local
-*.env.*
-
-# Dependencies
+```
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -16,40 +7,31 @@ __pycache__/
 .Python
 venv/
 .venv/
-.env/
-.venv.bak/
-pip-log.txt
-pip-selfcheck.json
+.env
+.env.local
+.env.*
 
-# Build artifacts
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Build and distribution
 build/
 dist/
-*.egg
 *.egg-info/
-*.so
-*.dylib
-*.dll
-*.exe
-*.o
-*.obj
-*.out
 
 # Testing
 .coverage
-coverage/
 htmlcov/
-.nyc_output/
-.mypy_cache/
+.coverage.*
+.noserc
 .pytest_cache/
-.hypothesis/
+.mypy_cache/
 
-# Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
+# OS generated files
 .DS_Store
 Thumbs.db
 ```
