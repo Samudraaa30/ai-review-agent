@@ -48,6 +48,14 @@ from backend.repository_comparison import (
     compare_repositories
 )
 
+# Enterprise Workflow Management
+from backend.services.workflow_manager import (
+    WorkflowManager,
+    WorkflowStore,
+    ScanStage,
+    ScanStatus
+)
+
 from backend.dashboard_metrics import (
     calculate_dashboard_metrics
 )
@@ -302,6 +310,9 @@ available_pages = []
 
 # All roles can access the main scanner
 available_pages.append("🔍 Security Scanner")
+
+# Add new Enterprise Scanner with 7-stage workflow
+available_pages.append("🔒 Enterprise Scanner")
 
 # Developer specific
 if st.session_state.role in ["Developer", "Manager", "Admin"]:
