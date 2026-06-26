@@ -1,7 +1,7 @@
 import json
 import os
-
 from dataclasses import asdict, is_dataclass
+
 
 def generate_report(
     session_id,
@@ -21,9 +21,9 @@ def generate_report(
         "summary": summary,
         "total_findings": len(findings),
         "findings": [
-          asdict(f) if is_dataclass(f) else f
-          for f in findings
-         ],
+            asdict(f) if is_dataclass(f) else f
+            for f in findings
+        ],
     }
 
     with open(output_file, "w") as f:

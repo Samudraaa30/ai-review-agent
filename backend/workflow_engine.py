@@ -13,6 +13,7 @@ import traceback
 from jupyter_client import session
 
 # Core application detectors
+from backend.risk_score import calculate_risk_score
 from backend.secret_detector import detect_secrets
 from backend.validation_detector import detect_validations
 from backend.source_detector import detect_sources
@@ -118,6 +119,33 @@ class ReviewSession:
 
 # --- Mock Database (In-Memory for Demo Stability) ---
 review_store: Dict[str, ReviewSession] = {}
+REVIEWS_FILE = "reviews.json"
+def save_reviews():
+
+    data = []
+
+    for review in review_store.values():
+        data.append(asdict(review))
+
+    with open(REVIEWS_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+def load_reviews():
+
+    global review_store
+
+    if not os.path.exists(REVIEWS_FILE):
+        return
+
+    try:
+
+        with open(REVIEWS_FILE, "r") as f:
+            data = json.load(f)
+
+        print(f"Loaded {len(data)} previous reviews.")
+
+    except Exception as e:
+        print(e)
 
 def generate_session_id(repo_url: str, user_email: str) -> str:
     timestamp = str(time.time())
@@ -127,15 +155,14 @@ def generate_session_id(repo_url: str, user_email: str) -> str:
 # --- Security Tool Simulators (Stable Mocks) ---
 
 import subprocess
+import json
+import traceback
 
 def run_bandit(files_path):
-    """
-    Run Bandit on the cloned repository.
-    """
     if not files_path:
         return []
 
-    repo_root = os.path.dirname(files_path) if os.path.isfile(files_path) else files_path
+    repo_root = files_path
 
     try:
         result = subprocess.run(
@@ -144,22 +171,37 @@ def run_bandit(files_path):
             text=True
         )
 
-        if not result.stdout:
+        # Print Bandit's stderr so we know why it failed
+        if result.stderr:
+            print("Bandit stderr:")
+            print(result.stderr)
+
+        # If Bandit didn't produce JSON, don't crash
+        if not result.stdout.strip():
+            print("Bandit returned no JSON.")
             return []
 
-        report = json.loads(result.stdout)
+        try:
+            report = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            print("Invalid JSON returned by Bandit:")
+            print(result.stdout)
+            return []
+
         findings = []
 
         for issue in report.get("results", []):
             findings.append({
-                "rule": issue.get("test_id"),
-                "severity": issue.get("issue_severity"),
-                "issue": issue.get("issue_text"),
-                "file": issue.get("filename"),
-                "line": issue.get("line_number"),
+                "rule": issue.get("test_id", "BANDIT"),
+                "severity": issue.get("issue_severity", "LOW"),
+                "issue": issue.get("issue_text", "Security issue"),
+                "file": issue.get("filename", ""),
+                "line": issue.get("line_number", 0),
                 "code": issue.get("code", "")
             })
+
         return findings
+
     except Exception:
         traceback.print_exc()
         return []
@@ -167,51 +209,59 @@ def run_bandit(files_path):
 # --- Qwen AI Reasoning Engine ---
 
 def generate_qwen_reasoning(tool_findings, files):
-    """
-    Uses the real Qwen model to enrich security findings.
-    """
+
     ai_findings = []
 
+    # Limit findings for demo
+    tool_findings = tool_findings[:10]
+
     for finding in tool_findings:
-         import pprint
 
-         print("\n" + "=" * 80)
-         print("FINDING KEYS:")
-         print(finding.keys())
-         print("FULL FINDING:")
-         pprint.pprint(finding)
-         print("=" * 80 + "\n")
+        severity = finding.get("severity", "MEDIUM").upper()
 
-         review = QwenAgent.review_finding(finding)
+        review = QwenAgent.review_finding(finding)
 
-         ai_findings.append(
+        ai_findings.append(
             AIFinding(
-                id=hashlib.md5(f"{finding['file']}{finding['line']}".encode()).hexdigest()[:8],
-                severity=review.get("severity", finding.get("severity", "MEDIUM")),
+                id=hashlib.md5(
+                    f"{finding.get('file','unknown')}{finding.get('line',0)}".encode()
+                ).hexdigest()[:8],
+
+                severity=severity,
+
                 title=finding.get("issue", "Security Finding"),
-                description=review.get(
-                 "risk",
-                 finding.get("issue", "Security finding detected")
-                ),
-                why_vulnerable=review.get("risk", ""),
-                business_impact=review.get("business_impact", ""),
-                technical_impact=review.get("technical_impact", ""),
-                owasp_top10=review.get("owasp", ""),
-                owasp_asvs=review.get("asvs", ""),
-                cwe="",
-                confidence_score=review.get("confidence", 80),
-                recommendation=review.get("recommendation", ""),
+
+                description=review["risk"],
+
+                why_vulnerable=review["risk"],
+
+                business_impact=review["business_impact"],
+
+                technical_impact=review["technical_impact"],
+
+                owasp_top10=review["owasp"],
+
+                owasp_asvs=review["asvs"],
+
+                cwe=finding.get("rule", ""),
+
+                confidence_score=review["confidence"],
+
+                recommendation=review["recommendation"],
+
                 snippet=CodeSnippet(
-                    file_path=finding["file"],
+                    file_path=finding.get("file", ""),
                     function_name="Unknown",
-                    start_line=finding["line"],
-                    end_line=finding["line"],
-                    code=finding["code"],
-                    vulnerability_type=finding.get("issue", "Security Finding")
+                    start_line=finding.get("line", 0),
+                    end_line=finding.get("line", 0),
+                    code=finding.get("code", ""),
+                    vulnerability_type=finding.get("issue", "")
                 ),
-                evidence="Generated using Qwen AI."
+
+                evidence="Generated from static security analysis."
             )
         )
+
     return ai_findings
 
 # --- Main Workflow Manager ---
@@ -347,15 +397,44 @@ class WorkflowManager:
             file_paths = [f.path for f in session.relevant_files]
 
             raw_findings = []
-            raw_findings.extend(run_bandit(repo_path))
-            raw_findings.extend(detect_secrets(repo_path))
-            raw_findings.extend(detect_auth(repo_path))
-            raw_findings.extend(detect_authorization(repo_path))
-            raw_findings.extend(detect_validations(repo_path))
-            raw_findings.extend(detect_sources(repo_path))
-            raw_findings.extend(detect_sinks(repo_path))
-            raw_findings.extend(detect_dependencies(repo_path))
-            
+
+            review_type = session.review_types[0]
+
+            if review_type == "Input Validation":
+
+             raw_findings.extend(detect_validations(repo_path))
+             raw_findings.extend(detect_sources(repo_path))
+             raw_findings.extend(detect_sinks(repo_path))
+
+            elif review_type == "Secrets Detection":
+
+             raw_findings.extend(detect_secrets(repo_path))
+
+            elif review_type == "Authentication Review":
+
+             raw_findings.extend(detect_auth(repo_path))
+
+            elif review_type == "Authorization Review":
+
+             raw_findings.extend(detect_authorization(repo_path))
+
+            elif review_type == "Dependency Security":
+
+             raw_findings.extend(detect_dependencies(repo_path))
+
+            else:
+    # Full Review / Fallback
+             raw_findings.extend(run_bandit(repo_path))
+             raw_findings.extend(detect_secrets(repo_path))
+             raw_findings.extend(detect_auth(repo_path))
+             raw_findings.extend(detect_authorization(repo_path))
+             raw_findings.extend(detect_validations(repo_path))
+             raw_findings.extend(detect_sources(repo_path))
+             raw_findings.extend(detect_sinks(repo_path))
+             raw_findings.extend(detect_dependencies(repo_path))
+             
+            session.risk_score = calculate_risk_score(raw_findings)
+
             review_store[session_id] = session
             time.sleep(0.5)
 
@@ -363,16 +442,10 @@ class WorkflowManager:
             session.current_stage = ReviewStage.AI_REASONING
             session.progress_percent = 85
             session.findings = generate_qwen_reasoning(raw_findings, file_paths)
+            print("RAW FINDINGS:", len(raw_findings))
+            print("AI FINDINGS:", len(session.findings))
 
-            # Calculate Risk Score
-            critical = sum(1 for f in session.findings if f.severity == "CRITICAL")
-            high = sum(1 for f in session.findings if f.severity == "HIGH")
-            medium = sum(1 for f in session.findings if f.severity == "MEDIUM")
-            low = sum(1 for f in session.findings if f.severity == "LOW")
-
-            score = (critical * 25 + high * 15 + medium * 8 + low * 3)
-            session.risk_score = min(score, 100)
-            
+            # Calculate Risk Score            
             review_store[session_id] = session
             time.sleep(0.5)
 
@@ -381,15 +454,28 @@ class WorkflowManager:
             session.progress_percent = 100
             session.status = ReviewStatus.COMPLETED
             
-            session.executive_summary = QwenAgent.summarize([
-                {
-                    "severity": f.severity,
-                    "title": f.title,
-                    "description": f.description,
-                    "recommendation": f.recommendation
-                }
-                for f in session.findings
-            ])
+            critical = sum(1 for f in session.findings if f.severity == "CRITICAL")
+            high = sum(1 for f in session.findings if f.severity == "HIGH")
+            medium = sum(1 for f in session.findings if f.severity == "MEDIUM")
+            low = sum(1 for f in session.findings if f.severity == "LOW")
+
+            session.executive_summary = f"""
+            Repository Review Summary
+
+            Overall Risk Score: {session.risk_score}/100
+
+            Findings Summary:
+            • Critical: {critical}
+            • High: {high}
+            • Medium: {medium}
+            • Low: {low}
+
+            Business Impact:
+            The repository contains security findings that should be remediated before production deployment. Critical and High findings require immediate attention, while Medium and Low findings should be addressed during the development lifecycle.
+
+            Top Recommendation:
+            Prioritize remediation of Critical and High severity vulnerabilities, strengthen secure coding practices, and perform security validation before release.
+            """
             
             generate_report(
              session_id=session.id,
@@ -405,7 +491,7 @@ class WorkflowManager:
             logger.info(f"Review {session_id} completed successfully.")
             return session
 
-        except Exception:
+        except Exception as e:
            traceback.print_exc()
            
            session.status = ReviewStatus.FAILED

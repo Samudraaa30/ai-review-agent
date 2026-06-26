@@ -32,11 +32,33 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Background Thread Manager for Scans ---
-if 'running_scans' not in st.session_state:
+# -----------------------------
+# Session State Initialization
+# -----------------------------
+
+if "running_scans" not in st.session_state:
     st.session_state.running_scans = {}
-if 'finding_statuses' not in st.session_state:
-    st.session_state.finding_statuses = {} # Maps finding_id -> status (Open, In Review, Resolved, False Positive)
+
+if "finding_statuses" not in st.session_state:
+    st.session_state.finding_statuses = {}
+
+if "scan_history" not in st.session_state:
+    st.session_state.scan_history = []
+
+if "active_scan" not in st.session_state:
+    st.session_state.active_scan = None
+
+if "current_session" not in st.session_state:
+    st.session_state.current_session = None
+
+if "selected_finding" not in st.session_state:
+    st.session_state.selected_finding = None
+
+if "review_cache" not in st.session_state:
+    st.session_state.review_cache = {}
+
+if "notifications" not in st.session_state:
+    st.session_state.notifications = []
 
 def run_pipeline_async(session_id: str):
     """Executes the pipeline inside a background thread so the UI remains highly responsive."""
@@ -47,9 +69,11 @@ def run_pipeline_async(session_id: str):
             review_store[session_id].status = ReviewStatus.FAILED
             review_store[session_id].error_message = str(e)
     finally:
+     try:
         if session_id in st.session_state.running_scans:
             st.session_state.running_scans.pop(session_id, None)
-
+     except Exception:
+        pass
 # --- Styling & CSS Injector ---
 st.markdown("""
 <style>
@@ -155,7 +179,7 @@ if not st.session_state.logged_in:
             role = st.selectbox("Role", ["Developer", "Manager"], label_visibility="collapsed")
             
             st.write("")
-            submitted = st.form_submit_button("Authenticate into Platform", use_container_width=True, type="primary")
+            submitted = st.form_submit_button("Authenticate into Platform", width="stretch", type="primary")
             
             if submitted:
                 if email:
@@ -183,7 +207,7 @@ else:  # Manager
     menu = st.sidebar.radio("Platform Navigation", ["Dashboard", "Manager Review Queue", "Repository Explorer", "Compare Scans", "Scan History", "Report Center"])
 
 st.sidebar.markdown("---")
-if st.sidebar.button("System Logout", use_container_width=True, type="secondary"):
+if st.sidebar.button("System Logout",width="stretch", type="secondary"):
     logout()
 
 # --- Shared UI Helpers ---
@@ -216,7 +240,6 @@ def render_stage_stepper(current_stage: ReviewStage, status: ReviewStatus):
             icon = "🔄"
         else:
             icon = str(i + 1)
-
         with col:
             st.markdown(
                 f"""
@@ -422,7 +445,7 @@ elif menu == "New Scan Engine":
         with c2:
             st.text_input("Developer Context (Auto)", value=st.session_state.user_email, disabled=True)
             
-        submit_scan = st.form_submit_button("Initiate Security Scan Engine", use_container_width=True, type="primary")
+        submit_scan = st.form_submit_button("Initiate Security Scan Engine", width="stretch", type="primary")
         
         if submit_scan:
             if not repo_url:
@@ -450,7 +473,7 @@ elif menu == "New Scan Engine":
             with c_p2:
                 if s_id in st.session_state.running_scans:
                     st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
-                    if st.button("🔄 Check Engine State", type="primary", use_container_width=True): st.rerun()
+                    if st.button("🔄 Check Engine State", type="primary", width="stretch"): st.rerun()
                     
             if session.status == ReviewStatus.RUNNING:
                 st.info(f"🔄 Engine Processing: **{session.current_stage.value}**... Synthesizing outputs.")
@@ -501,7 +524,7 @@ elif menu == "New Scan Engine":
                     st.subheader("2. Qwen Selected Relevance Matrix (Files & Snippets)")
                     if session.relevant_files:
                         df = pd.DataFrame([{"File": f.path, "AI Relevance": f.relevance_score, "Reason": f.reason} for f in session.relevant_files])
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        st.dataframe(df, width="stretch")
                     else:
                         st.spinner("AI Agent identifying vulnerable code domains...")
                     st.markdown("</div>", unsafe_allow_html=True)
@@ -777,13 +800,13 @@ elif menu == "Report Center":
                 
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.download_button("💾 Download JSON Payload", data=json_data, file_name=f"ReBIT_Audit_{r.id}.json", mime="application/json", use_container_width=True)
+                    st.download_button("💾 Download JSON Payload", data=json_data, file_name=f"ReBIT_Audit_{r.id}.json", mime="application/json", width="stretch")
                 with c2:
-                    st.download_button("🌐 Download HTML Report", data=html_data, file_name=f"ReBIT_Audit_{r.id}.html", mime="text/html", use_container_width=True)
+                    st.download_button("🌐 Download HTML Report", data=html_data, file_name=f"ReBIT_Audit_{r.id}.html", mime="text/html", width="stretch")
                 with c3:
-                    st.download_button("📄 Download PDF (Text)", data=pdf_mock_text, file_name=f"ReBIT_Audit_{r.id}.txt", mime="text/plain", use_container_width=True)
+                    st.download_button("📄 Download PDF (Text)", data=pdf_mock_text, file_name=f"ReBIT_Audit_{r.id}.txt", mime="text/plain", width="stretch")
                 with c4:
-                    if st.button("Interactive UI Inspection", key=f"insp_{r.id}", use_container_width=True):
+                    if st.button("Interactive UI Inspection", key=f"insp_{r.id}", width="stretch"):
                         st.session_state.current_scan_id = r.id
                         st.session_state.current_view_id = r.id
                         st.rerun()

@@ -1,0 +1,78 @@
+{
+    "session_id": "eeb3c88619e3",
+    "repository": "bf92a167-706a-4ffb-8711-8eb4eec62aa5",
+    "risk_score": 45,
+    "summary": "Executive summary unavailable.",
+    "total_findings": 3,
+    "findings": [
+        {
+            "id": "606b89ce",
+            "severity": "HIGH",
+            "title": "Token detected",
+            "description": "AI Review Failed",
+            "why_vulnerable": "AI Review Failed",
+            "business_impact": "429 Client Error: Too Many Requests for url: https://openrouter.ai/api/v1/chat/completions",
+            "technical_impact": "",
+            "owasp_top10": "",
+            "owasp_asvs": "",
+            "cwe": "",
+            "confidence_score": 0,
+            "recommendation": "Verify OpenRouter API key and model.",
+            "snippet": {
+                "file_path": "repos/bf92a167-706a-4ffb-8711-8eb4eec62aa5/server.js",
+                "function_name": "Unknown",
+                "start_line": 110,
+                "end_line": 110,
+                "code": "res.locals.csrftoken = req.csrfToken();",
+                "vulnerability_type": "Token detected"
+            },
+            "evidence": "Generated using Qwen AI."
+        },
+        {
+            "id": "078896ec",
+            "severity": "HIGH",
+            "title": "Password detected",
+            "description": "AI Review Failed",
+            "why_vulnerable": "AI Review Failed",
+            "business_impact": "429 Client Error: Too Many Requests for url: https://openrouter.ai/api/v1/chat/completions",
+            "technical_impact": "",
+            "owasp_top10": "",
+            "owasp_asvs": "",
+            "cwe": "",
+            "confidence_score": 0,
+            "recommendation": "Verify OpenRouter API key and model.",
+            "snippet": {
+                "file_path": "repos/bf92a167-706a-4ffb-8711-8eb4eec62aa5/app/data/user-dao.js",
+                "function_name": "Unknown",
+                "start_line": 60,
+                "end_line": 60,
+                "code": "const comparePassword = (fromDB, fromUser) => {",
+                "vulnerability_type": "Password detected"
+            },
+            "evidence": "Generated using Qwen AI."
+        },
+        {
+            "id": "56eb0045",
+            "severity": "HIGH",
+            "title": "Password detected",
+            "description": "AI Review Failed",
+            "why_vulnerable": "AI Review Failed",
+            "business_impact": "429 Client Error: Too Many Requests for url: https://openrouter.ai/api/v1/chat/completions",
+            "technical_impact": "",
+            "owasp_top10": "",
+            "owasp_asvs": "",
+            "cwe": "",
+            "confidence_score": 0,
+            "recommendation": "Verify OpenRouter API key and model.",
+            "snippet": {
+                "file_path": "repos/bf92a167-706a-4ffb-8711-8eb4eec62aa5/app/data/user-dao.js",
+                "function_name": "Unknown",
+                "start_line": 80,
+                "end_line": 80,
+                "code": "invalidPasswordError.invalidPassword = true;",
+                "vulnerability_type": "Password detected"
+            },
+            "evidence": "Generated using Qwen AI."
+        }
+    ]
+}

@@ -1,17 +1,11 @@
 """
-Qwen AI Gateway
-Centralized LLM interface for the ReBIT AI SSDLC Review Platform.
+Qwen AI Gateway (Offline Demo Version)
+
+This version generates deterministic security analysis without
+calling OpenRouter or Ollama.
 """
 
 import json
-import os
-import requests
-from dotenv import load_dotenv
-
-load_dotenv()
-
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-MODEL = os.getenv("LLM_MODEL", "qwen2.5-coder:7b")
 
 
 class QwenAgent:
@@ -19,143 +13,118 @@ class QwenAgent:
     @staticmethod
     def generate(prompt: str) -> str:
         """
-        Send a prompt to the local Qwen model.
+        Offline placeholder.
         """
-
-        response = requests.post(
-            f"{OLLAMA_HOST}/api/generate",
-            json={
-                "model": MODEL,
-                "prompt": prompt,
-                "stream": False
-            },
-            timeout=300
-        )
-
-        response.raise_for_status()
-
-        return response.json()["response"]
+        return "Offline AI"
 
     @staticmethod
-    def review_finding(finding: dict) -> dict:
+    def review_finding(finding: dict):
 
-        prompt = f"""
-You are an expert cybersecurity reviewer.
+        severity = finding.get("severity", "MEDIUM").upper()
+        rule = finding.get("rule", "")
+        issue = finding.get("issue", "")
 
-Analyze the following security finding.
+        if "SECRET" in rule.upper():
+            owasp = "A02:2021 Cryptographic Failures"
+            asvs = "V6"
+        elif "AUTH" in rule.upper():
+            owasp = "A07:2021 Identification and Authentication Failures"
+            asvs = "V2"
+        elif "AUTHORIZATION" in rule.upper():
+            owasp = "A01:2021 Broken Access Control"
+            asvs = "V4"
+        elif "DEPENDENCY" in rule.upper():
+            owasp = "A06:2021 Vulnerable and Outdated Components"
+            asvs = "V14"
+        else:
+            owasp = "A05:2021 Security Misconfiguration"
+            asvs = "V1"
 
-Finding:
-
-{json.dumps(finding, indent=2)}
-
-Return ONLY valid JSON.
-
-Format:
-
-{{
-    "risk":"...",
-    "business_impact":"...",
-    "technical_impact":"...",
-    "owasp":"...",
-    "asvs":"...",
-    "recommendation":"...",
-    "confidence":95
-}}
-
-Do not explain.
-Only return JSON.
-"""
-
-        try:
-
-            result = QwenAgent.generate(prompt)
-
-            return json.loads(result)
-
-        except Exception as e:
+        if severity == "CRITICAL":
 
             return {
+                "risk": "Critical vulnerability detected.",
+                "business_impact": "May result in severe business disruption, financial loss, or sensitive data exposure.",
+                "technical_impact": "Attackers may fully compromise the application.",
+                "owasp": owasp,
+                "asvs": asvs,
+                "recommendation": "Immediate remediation is required before production deployment.",
+                "confidence": 98
+            }
 
-                "risk": "AI Review Failed",
+        elif severity == "HIGH":
 
-                "business_impact": str(e),
+            return {
+                "risk": "High-risk security vulnerability.",
+                "business_impact": "May significantly affect confidentiality, integrity, or availability.",
+                "technical_impact": "Can be exploited under realistic attack scenarios.",
+                "owasp": owasp,
+                "asvs": asvs,
+                "recommendation": "Resolve during the current development cycle.",
+                "confidence": 95
+            }
 
-                "technical_impact": "",
+        elif severity == "MEDIUM":
 
-                "owasp": "",
+            return {
+                "risk": "Moderate security weakness.",
+                "business_impact": "Could increase operational or compliance risks.",
+                "technical_impact": "Weakens the application's overall security posture.",
+                "owasp": owasp,
+                "asvs": asvs,
+                "recommendation": "Fix before production release.",
+                "confidence": 90
+            }
 
-                "asvs": "",
+        else:
 
-                "recommendation": "Verify Ollama and Qwen model.",
-
-                "confidence": 0
+            return {
+                "risk": "Low-risk security observation.",
+                "business_impact": "Minimal business impact.",
+                "technical_impact": "Minor security improvement recommended.",
+                "owasp": owasp,
+                "asvs": asvs,
+                "recommendation": "Address during routine maintenance.",
+                "confidence": 85
             }
 
     @staticmethod
     def select_relevant_files(files, review_type):
-
-        file_text = "\n".join(files)
-
-        prompt = f"""
-You are an expert SSDLC reviewer.
-
-Review Type:
-
-{review_type}
-
-Repository Files:
-
-{file_text}
-
-Select the 10 most security relevant files.
-
-Return ONLY JSON.
-
-Example:
-
-[
-    "app/auth.py",
-    "routes/login.py"
-]
-"""
-
-        try:
-
-            result = QwenAgent.generate(prompt)
-
-            return json.loads(result)
-
-        except Exception:
-
-            return files[:10]
+        """
+        Select the first 10 files.
+        """
+        return files[:10]
 
     @staticmethod
     def summarize(findings):
 
-        prompt = f"""
-Generate an executive summary for management.
+        if not findings:
+            return "No security findings were detected."
 
-Findings:
+        critical = sum(1 for f in findings if f.get("severity") == "CRITICAL")
+        high = sum(1 for f in findings if f.get("severity") == "HIGH")
+        medium = sum(1 for f in findings if f.get("severity") == "MEDIUM")
+        low = sum(1 for f in findings if f.get("severity") == "LOW")
 
-{json.dumps(findings, indent=2)}
+        return f"""
+Repository Security Review Summary
 
-Include:
-
-Overall Risk
-
-Critical Issues
+Overall Findings
+----------------
+Critical : {critical}
+High     : {high}
+Medium   : {medium}
+Low      : {low}
 
 Business Impact
+---------------
+The repository contains security findings that should be addressed before production deployment. Critical and High severity issues require immediate remediation.
 
-Top Recommendations
-
-Keep under 300 words.
+Recommendations
+---------------
+• Remove hardcoded secrets.
+• Validate all user inputs.
+• Strengthen authentication and authorization.
+• Update vulnerable dependencies.
+• Re-run security analysis after remediation.
 """
-
-        try:
-
-            return QwenAgent.generate(prompt)
-
-        except Exception:
-
-            return "Executive summary unavailable."
